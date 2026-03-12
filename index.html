@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="theme-color" content="#030812"/>
+<title>MFSignal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#060a14;--s1:#0a1020;--s2:#0e1628;
+  --b1:#1a2840;--b2:#223050;
+  --t1:#f0f6ff;--t2:#8ba8cc;--t3:#4a6080;
+  --green:#00d68f;--gd:#00d68f15;--gb:#001f12;
+  --amber:#f5a623;--ad:#f5a62315;
+  --blue:#4db8ff;--bd:#4db8ff12;
+  --red:#ff5c5c;--rd:#ff5c5c12;
+  --r:12px;--r-sm:8px;
+}
+html{font-size:14px}
+body{background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;line-height:1.5}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 60% 40% at 10% 15%,#00d68f07,transparent 70%),
+  radial-gradient(ellipse 50% 35% at 90% 80%,#4db8ff07,transparent 70%)}
+#splash{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-logo{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#00d68f,#00a86b);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 32px rgba(0,214,143,.4);animation:float 2s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.sp-title{font-size:22px;font-weight:800;color:#f0f6ff}
+.sp-sub{font-size:11px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase}
+.sp-bar{width:180px;height:2px;background:var(--b1);border-radius:2px;overflow:hidden}
+.sp-fill{height:100%;background:linear-gradient(90deg,#00d68f,#4db8ff);width:0%;transition:width .35s ease}
+#sp-msg{font-size:11px;color:var(--t3);font-family:monospace}
+.navbar{position:sticky;top:0;z-index:500;height:56px;background:rgba(6,10,20,.93);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px);padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{display:flex;align-items:center;gap:9px;text-decoration:none}
+.nav-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#00d68f,#00a86b);display:flex;align-items:center;justify-content:center;font-size:15px}
+.nav-name{font-size:16px;font-weight:800;color:#f0f6ff}
+.nav-time{font-size:11px;color:var(--t2);font-family:monospace;padding:4px 10px;background:var(--s1);border:1px solid var(--b1);border-radius:6px}
+.fund-tabs-wrap{padding:14px 20px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.fund-tabs{display:flex;gap:8px;min-width:max-content}
+.ftab{padding:9px 20px;border-radius:var(--r-sm);border:1px solid var(--b1);background:var(--s1);color:var(--t3);font-size:12px;font-weight:600;white-space:nowrap;transition:all .2s;position:relative;overflow:hidden}
+.ftab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--fc,#00d68f);opacity:0;transition:opacity .2s}
+.ftab.active{background:var(--s2);color:var(--fc,#00d68f);border-color:color-mix(in srgb,var(--fc,#00d68f) 28%,transparent)}
+.ftab.active::after{opacity:1}
+.ftab:hover:not(.active){background:var(--s2);color:var(--t2)}
+.ftab-sub{font-size:9px;font-weight:400;opacity:.6;display:block;margin-top:2px}
+.app{position:relative;z-index:1}
+.main{padding:16px 20px 80px;max-width:1200px;margin:0 auto;width:100%}
+.status-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-sm);margin-bottom:14px;font-size:11px}
+.s-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.s-dot.ok{background:#00d68f}
+.s-dot.loading{background:#f5a623;animation:pulse .8s infinite}
+.s-dot.err{background:#ff5c5c}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.s-text{color:var(--t2)}
+.refresh-btn{margin-left:auto;padding:5px 12px;border-radius:6px;border:1px solid var(--b2);background:var(--s2);color:var(--t2);font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s;cursor:pointer}
+.refresh-btn:hover{border-color:#00d68f;color:#00d68f}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mini-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;margin-bottom:14px}
+.mini-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:13px 15px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.mini-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--fc,#00d68f)}
+.mini-card.active,.mini-card:hover{background:var(--s2);border-color:color-mix(in srgb,var(--fc,#00d68f) 25%,transparent)}
+.mc-fund{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.mc-nav{font-size:21px;font-weight:800;line-height:1}
+.mc-date{font-size:10px;color:var(--t3);margin-top:4px}
+.mc-strategy{font-size:10px;color:var(--t2);margin-top:3px}
+.fund-hero{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.fund-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--fc,#00d68f),var(--fc2,#4db8ff))}
+.hero-row{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.hero-fund{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.hero-nav{font-size:38px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.hero-date{font-size:11px;color:var(--t3);margin-top:6px}
+.hero-scheme{font-size:11px;color:var(--t2);margin-top:2px}
+.hero-right{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.stat-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid}
+.pill-green{background:var(--gd);color:#00d68f;border-color:rgba(0,214,143,.3)}
+.pill-amber{background:var(--ad);color:#f5a623;border-color:rgba(245,166,35,.3)}
+.pill-none{background:var(--s2);color:var(--t3);border-color:var(--b2)}
+.hero-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)}
+.hstat{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r-sm);padding:9px 14px;min-width:88px}
+.hstat-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.hstat-val{font-size:16px;font-weight:700;line-height:1}
+.tabs-bar{display:flex;gap:1px;border-bottom:1px solid var(--b1);margin-bottom:16px;overflow-x:auto}
+.tab-btn{padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);font-size:12px;font-weight:600;margin-bottom:-1px;transition:all .15s;white-space:nowrap;cursor:pointer}
+.tab-btn.active{color:#f5a623;border-bottom-color:#f5a623}
+.tab-btn:hover:not(.active){color:var(--t2)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.chart-panel{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.chart-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chart-title{font-size:12px;font-weight:700;color:var(--t1)}
+.btn-group{display:flex;gap:3px}
+.btn-pill{padding:4px 10px;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--t3);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-pill.active{background:var(--bd);border-color:rgba(77,184,255,.35);color:#4db8ff}
+.btn-pill:hover:not(.active){background:var(--s2);color:var(--t2)}
+.chart-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:10px;color:var(--t3)}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-line{width:14px;height:2px;border-radius:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.cal-card{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r-sm);padding:13px;border-left:3px solid #00d68f;transition:transform .2s}
+.cal-card:hover{transform:translateY(-1px)}
+.cal-month{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.cal-date{font-size:14px;font-weight:700}
+.cal-nav{font-size:12px;color:var(--t1);margin-top:2px;font-family:monospace}
+.cal-meta{font-size:10px;color:var(--t3);margin-top:4px}
+.cal-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.cal-tag{background:var(--gb);color:#00d68f;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600}
+.cal-ret{display:inline-block;margin-top:7px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}
+.ret-pos{background:var(--gd);color:#00d68f}
+.ret-neg{background:var(--rd);color:#ff5c5c}
+.ret-pend{background:var(--bd);color:#4db8ff}
+.no-signal{color:var(--t3);font-size:12px;padding:20px 0}
+.bt-metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px;margin-bottom:14px}
+.bt-metric{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-sm);padding:12px 14px}
+.bt-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.bt-val{font-size:18px;font-weight:700;line-height:1}
+.slider-panel{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-sm);padding:14px;margin-bottom:12px}
+input[type=range]{width:100%;accent-color:#f5a623;cursor:pointer;margin-top:6px}
+.slider-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--t3);margin-top:4px}
+.trade-wrap{max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--s2);position:sticky;top:0;z-index:2}
+th{padding:9px 12px;text-align:left;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--b2)}
+tbody tr{border-bottom:1px solid var(--b1)}
+tbody tr:hover{background:var(--s2)}
+td{padding:9px 12px;font-size:12px}
+.disclaimer{font-size:11px;color:var(--t3);line-height:1.7;padding:10px 14px;background:var(--s1);border:1px solid var(--b1);border-left:3px solid #f5a623;border-radius:var(--r-sm);margin-bottom:14px}
+.disclaimer strong{color:#f5a623}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:400;background:rgba(6,10,20,.95);border-top:1px solid var(--b1);backdrop-filter:blur(16px);padding:7px 0 max(7px,env(safe-area-inset-bottom))}
+.bottom-nav-inner{display:flex;justify-content:space-around}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 12px;background:none;border:none;color:var(--t3);font-size:9px;font-weight:600;cursor:pointer;transition:color .2s}
+.bnav-btn.active{color:#00d68f}
+.bnav-icon{font-size:19px;line-height:1}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--s1)}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+@media(max-width:768px){.main{padding:12px 12px 76px}.bottom-nav{display:block}.mini-cards{grid-template-columns:1fr 1fr}.fund-tabs-wrap{padding:10px 12px 0}.nav-time{display:none}.hero-nav{font-size:30px}}
+@media(max-width:480px){.mini-cards{grid-template-columns:1fr}.hero-row{flex-direction:column}.hero-right{align-items:flex-start}.bt-metrics{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="sp-logo">&#128225;</div>
+  <div class="sp-title">MFSignal</div>
+  <div class="sp-sub">Loading official NAV data</div>
+  <div class="sp-bar"><div class="sp-fill" id="spFill"></div></div>
+  <div id="sp-msg">Connecting to AMFI...</div>
+</div>
+<div class="app">
+<nav class="navbar">
+  <a class="nav-brand" href="#">
+    <div class="nav-icon">&#128225;</div>
+    <span class="nav-name">MFSignal</span>
+  </a>
+  <div class="nav-time" id="clockEl">--:--:-- IST</div>
+</nav>
+<div class="fund-tabs-wrap"><div class="fund-tabs" id="fundTabs"></div></div>
+<div class="main">
+  <div class="disclaimer"><strong>Data source:</strong> AMFI official NAV via mfapi.in &mdash; declared once daily at 9 PM IST. Signal dates based on historical NAV patterns only. <strong>Not investment advice.</strong></div>
+  <div class="status-bar">
+    <div class="s-dot" id="sDot"></div>
+    <span class="s-text" id="sText">Loading...</span>
+    <button class="refresh-btn" onclick="doRefresh()"><span id="refreshIcon">&#8635;</span> Refresh NAV</button>
+  </div>
+  <div class="mini-cards" id="miniCards"></div>
+  <div id="heroSection"></div>
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="sw('chart',this)">&#128202; NAV Chart</button>
+    <button class="tab-btn" onclick="sw('signals',this)">&#127919; Monthly Signals</button>
+    <button class="tab-btn" onclick="sw('backtest',this)">&#128200; Backtest</button>
+  </div>
+  <div class="tab-pane active" id="tab-chart">
+    <div class="chart-panel">
+      <div class="chart-toolbar">
+        <div class="chart-title" id="navChartTitle">NAV Chart</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <div class="btn-group" id="rangeGroup"></div>
+          <div class="btn-group">
+            <button class="btn-pill active" id="vDaily" onclick="setChartView('daily',this)">Daily</button>
+            <button class="btn-pill" id="vMonthly" onclick="setChartView('monthly',this)">Monthly</button>
+          </div>
+        </div>
+      </div>
+      <canvas id="navChart" style="max-height:360px"></canvas>
+      <div class="chart-legend">
+        <div class="leg-item"><div class="leg-line" id="legColor"></div><span id="legLabel">NAV</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:#2c3d62"></div><span>20 MA</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:rgba(0,214,143,.5)"></div><span>&#9650; Best Signal / Month</span></div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title" style="margin-bottom:10px;font-size:11px">RSI (14) &mdash; Oversold zone below 35</div>
+      <canvas id="rsiChart" style="max-height:85px"></canvas>
+    </div>
+  </div>
+  <div class="tab-pane" id="tab-signals">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">Best Entry Day &mdash; One Per Month</div>
+      <div style="font-size:10px;color:var(--t3)" id="calFundLabel"></div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div class="tab-pane" id="tab-backtest">
+    <div class="bt-metrics" id="btMetrics"></div>
+    <div class="slider-panel">
+      <div style="font-size:12px;color:var(--t2)">Simulated Hold Period: <strong id="holdLabel" style="color:#f5a623">30 days</strong></div>
+      <input type="range" min="7" max="120" value="30" id="holdSlider" oninput="onHold(this.value)">
+      <div class="slider-labels"><span>7d</span><span>30d</span><span>60d</span><span>90d</span><span>120d</span></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title" style="margin-bottom:12px;font-size:11px">Return Per Signal vs Nifty 50 Benchmark</div>
+      <canvas id="btChart" style="max-height:200px"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title" style="margin-bottom:12px;font-size:11px">Cumulative Alpha vs Nifty 50</div>
+      <canvas id="alphaChart" style="max-height:150px"></canvas>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700">Trade Log</span>
+        <span style="font-size:10px;color:var(--t3)" id="tradeCountEl"></span>
+      </div>
+      <div class="trade-wrap">
+        <table>
+          <thead><tr><th>Buy Date</th><th>NAV</th><th>Days</th><th>Return</th><th>Nifty ~</th><th>Alpha</th><th>Score</th></tr></thead>
+          <tbody id="tradeLog"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bnav-btn active" onclick="sw('chart',null,this)" id="bn-chart"><div class="bnav-icon">&#128202;</div>Chart</button>
+    <button class="bnav-btn" onclick="sw('signals',null,this)" id="bn-signals"><div class="bnav-icon">&#127919;</div>Signals</button>
+    <button class="bnav-btn" onclick="sw('backtest',null,this)" id="bn-backtest"><div class="bnav-icon">&#128200;</div>Backtest</button>
+  </div>
+</nav>
+</div>
+<script>
+var FUNDS={
+  ppfcf:{name:'Parag Parikh Flexi Cap',short:'PPFCF',color:'#f5a623',color2:'#ff7043',codes:[122639,122640,119183],navRange:{min:60,max:150},strategy:{name:'RSI Mean Reversion',desc:'RSI<38 · ATH Drawdown>4% · Below 30MA',icon:'📉',fn:'stratRSIMR'}},
+  nisc:{name:'Nippon India Small Cap',short:'NI SC',color:'#00d68f',color2:'#00bcd4',codes:[125497,118778,118777],navRange:{min:90,max:350},strategy:{name:'Bollinger Dip Catcher',desc:'Below BB Lower · 3+ Down Days · RSI<42',icon:'🔔',fn:'stratBBDip'}},
+  hdfc:{name:'HDFC Mid-Cap Opp.',short:'HDFC MC',color:'#4db8ff',color2:'#7c4dff',codes:[118989,118990,100233],navRange:{min:100,max:500},strategy:{name:'Monthly Low + MA Cross',desc:'Near Month Low · MA20<MA50 · >5% Drawdown',icon:'📅',fn:'stratMLMA'}}
+};
+var NIFTY_DAILY=0.000455;
+var RANGES=['3M','6M','1Y','2Y','3Y','ALL'];
+var activeFund='ppfcf',chartView='daily',viewRange='1Y',holdDays=30;
+var rawNAV={},officialNAVs={},navCI=null,rsiCI=null,btCI=null,alphaCI=null;
+
+function calcRSI(data,p){p=p||14;var n=data.length,o=[];for(var i=0;i<n;i++)o.push(50);for(var i=p;i<n;i++){var g=0,l=0;for(var j=i-p+1;j<=i;j++){var d=data[j].nav-data[j-1].nav;if(d>0)g+=d;else l+=Math.abs(d);}g/=p;l/=p;o[i]=l===0?100:100-100/(1+g/l);}return o;}
+function calcSMA(data,p){return data.map(function(_,i){if(i<p-1)return null;var s=0;for(var j=i-p+1;j<=i;j++)s+=data[j].nav;return s/p;});}
+function calcBB(data,w,m){w=w||20;m=m||2;return data.map(function(_,i){if(i<w-1)return null;var s=data.slice(i-w+1,i+1).map(function(d){return d.nav;});var mn=s.reduce(function(a,b){return a+b;},0)/w;var std=Math.sqrt(s.reduce(function(a,b){return a+(b-mn)*(b-mn);},0)/w);return{mean:mn,upper:mn+m*std,lower:mn-m*std};});}
+function athDD(data,i,lb){lb=lb||90;var a=0;for(var j=Math.max(0,i-lb);j<=i;j++)if(data[j].nav>a)a=data[j].nav;return a>0?((a-data[i].nav)/a)*100:0;}
+
+function stratRSIMR(data){var rsi=calcRSI(data,14),ma30=calcSMA(data,30),ma60=calcSMA(data,60),bb=calcBB(data,20,2);return data.map(function(d,i){var r=rsi[i],dd=athDD(data,i,90),sc=0,why=[];if(r<30){sc+=4;why.push('RSI<30');}else if(r<38){sc+=3;why.push('RSI<38');}else if(r<45){sc+=1;why.push('RSI Low');}if(dd>8){sc+=3;why.push(dd.toFixed(1)+'% from ATH');}else if(dd>4){sc+=2;why.push(dd.toFixed(1)+'% Drawdown');}else if(dd>2){sc+=1;why.push(dd.toFixed(1)+'% Dip');}if(ma30[i]&&d.nav<ma30[i]){sc+=2;why.push('Below 30MA');}if(ma60[i]&&ma30[i]&&ma30[i]<ma60[i]){sc+=1;why.push('Bearish MA');}if(bb[i]&&d.nav<bb[i].lower){sc+=2;why.push('Below BB');}return Object.assign({},d,{score:sc,why:why,rsi:r,ma20:ma30[i],ma50:ma60[i],bb:bb[i],drawdown:dd});});}
+function stratBBDip(data){var rsi=calcRSI(data,14),ma20=calcSMA(data,20),ma50=calcSMA(data,50),bb=calcBB(data,20,2);return data.map(function(d,i){var r=rsi[i],b=bb[i],dd=athDD(data,i,60),dc=0,sc=0,why=[];for(var j=i;j>Math.max(0,i-5);j--){if(data[j-1]&&data[j].nav<data[j-1].nav)dc++;else brea
